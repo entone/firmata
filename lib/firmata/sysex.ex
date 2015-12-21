@@ -1,17 +1,16 @@
 defmodule Firmata.Protocol.Sysex do
   use Firmata.Protocol.Mixin
 
-  def parse(state, <<@firmware_query>>, sysex) do
-    Keyword.put(state, :firmware_name, firmware_query(sysex))
+  def parse(<<@firmware_query>>, sysex) do
+    {:firmware_name, firmware_query(sysex)}
   end
 
-  def parse(state, <<@capability_response>>, sysex) do
-    Keyword.put(state, :pins, capability_response(sysex)[:pins])
+  def parse(<<@capability_response>>, sysex) do
+    {:pins, capability_response(sysex)[:pins]}
   end
 
-  def parse(state, <<unknown_command>>, _sysex) do
+  def parse(<<unknown_command>>, _sysex) do
     IO.puts "Bad byte"
-    state
   end
 
   def firmware_query(sysex) do

@@ -1,5 +1,6 @@
 defmodule Firmata.Board do
   use GenServer
+  use Firmata.Protocol.Mixin
 
   @doc """
   {:ok, board} = Firmata.Board.start_link "/dev/cu.usbmodem1421"
@@ -26,21 +27,13 @@ defmodule Firmata.Board do
     GenServer.call(board, {:get, key})
   end
 
-  def pin_mode(board, pin, mode) do
-    #write(PIN_MODE, 
-  end
-
   ## Server Callbacks
 
   def init([tty, baudrate]) do
-    IO.puts "Init'd with tty #{tty} @ #{baudrate}"
     {:ok, serial} = Serial.start_link
     Serial.open(serial, tty)
     Serial.set_speed(serial, baudrate)
-    state = [
-      serial: serial,
-      connected: false
-    ]
+    state = [ serial: serial, connected: false ]
     {:ok, state}
   end
 
@@ -53,11 +46,32 @@ defmodule Firmata.Board do
     {:reply, :ok, state}
   end
 
+  def handle_info(:report_version, state) do
+    Serial.send_data(state[:serial], <<@start_sysex, @capability_query, @end_sysex>>)
+    {:noreply, state}
+  end
+
+  def handle_info({:major_version, major }, state) do
+    {:noreply, Keyword.put(state, :major_version, major)}
+  end
+
+  def handle_info({:minor_version, minor }, state) do
+    {:noreply, Keyword.put(state, :minor_version, minor)}
+  end
+
+  def handle_info({:firmware_name, name }, state) do
+    {:noreply, Keyword.put(state, :firmware_name, name)}
+  end
+
+  def handle_info({:pins, pins }, state) do
+    IO.inspect pins
+    {:noreply, Keyword.put(state, :pins, pins)}
+  end
+
   def handle_info({:elixir_serial, _serial, data}, state) do
     acc = Firmata.Protocol.Accumulator.unpack(state)
-    state = Enum.scan(data, acc, &Firmata.Protocol.parse(&2, &1))
-    |> List.last
-    |> Firmata.Protocol.Accumulator.pack
+    state = Enum.reduce(data, acc, &Firmata.Protocol.parse(&2, &1))
+    |> Firmata.Protocol.Accumulator.pack(state)
     {:noreply, state}
   end
 end
