@@ -52,7 +52,6 @@ defmodule Firmata.Board do
     outbox = get(board, :outbox)
     if Enum.count(outbox) > 0 do
       [message | tail] = outbox
-      IO.inspect message
       set(board, :outbox, tail)
       send(board, message)
     end
@@ -73,28 +72,25 @@ defmodule Firmata.Board do
   end
 
   def handle_info({:report_version, major, minor }, state) do
-    IO.puts "got version: #{major}.#{minor}"
-    IO.puts "sending caps query"
     Serial.send_data(state[:serial], <<@start_sysex, @capability_query, @end_sysex>>)
     {:noreply, Keyword.put(state, :version, {major, minor})}
   end
 
   def handle_info({:firmware_name, name }, state) do
-    IO.puts "got firmware name: #{name}"
     {:noreply, Keyword.put(state, :firmware_name, name)}
   end
 
   def handle_info({:capability_response, pins }, state) do
-    IO.puts "got capabilities"
-    IO.puts "doing analog mapping query"
     state = Keyword.put(state, :pins, pins)
     Serial.send_data(state[:serial], <<@start_sysex, @analog_mapping_query, @end_sysex>>)
     {:noreply, state}
   end
 
   def handle_info({:analog_mapping_response, mapping }, state) do
-    IO.puts "got mapping"
-    IO.inspect mapping
+    pins = Enum.zip(state[:pins], mapping)
+    |> Enum.map(fn({pin, map})-> Keyword.merge(pin, map) end)
+    state = Keyword.put(state, :pins, pins)
+    |> Keyword.put(:connected, true)
     {:noreply, state}
   end
 
