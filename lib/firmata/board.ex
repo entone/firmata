@@ -5,8 +5,8 @@ defmodule Firmata.Board do
   @doc """
   {:ok, board} = Firmata.Board.start_link "/dev/cu.usbmodem1421"
   """
-  def start_link(tty, baudrate) do
-    GenServer.start_link(__MODULE__, [tty, baudrate], [])
+  def start_link(tty, baudrate, opts \\ []) do
+    GenServer.start_link(__MODULE__, [tty, baudrate], opts)
   end
 
   def connect(board) do
