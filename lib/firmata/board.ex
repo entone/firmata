@@ -3,6 +3,7 @@ defmodule Firmata.Board do
   use Firmata.Protocol.Mixin
 
   @initial_state [
+    subscriptions: [],
     pins: [],
     outbox: [],
     parser: {},
@@ -43,6 +44,14 @@ defmodule Firmata.Board do
     GenServer.call(board, {:report_analog_pin, pin, value})
   end
 
+  def subscribe(board, {message, pin}) do
+    GenServer.call(board, {:subscribe, self, {message, pin}})
+  end
+
+  def unsubscribe(board, sub) do
+    GenServer.call(board, {:unsubscribe, sub})
+  end
+
   ## Server Callbacks
 
   def init([tty, baudrate]) do
@@ -77,7 +86,27 @@ defmodule Firmata.Board do
     {:reply, :ok, state}
   end
 
-  def handle_call({:report_analog_pin, pin, value}, {pid, _ref}, state) do
+  @doc """
+  Subscribe a process to analog pin value changes
+  """
+  def handle_call({:subscribe, pid, {:analog_read, pin}}, _from, state) do
+    sub = {pid, :analog_read, pin}
+    subs = state[:subscriptions]
+    subs = [sub | subs]
+    {:reply, {:ok, sub}, Keyword.put(state, :subscriptions, subs)}
+  end
+
+  def handle_call({:unsubscribe, sub}, _from, state) do
+    subs = state[:subscriptions]
+    |> Enum.reject(fn(chk_sub)-> chk_sub == sub end)
+    ### TODO urgent
+    # If there are no subs for that given thing
+    # then just stop polling for that particular thing
+    # e.g. Firmata.Board.report_analog_pin(board, pin, 0)
+    {:reply, :ok, Keyword.put(state, :subscriptions, subs)}
+  end
+
+  def handle_call({:report_analog_pin, pin, value}, _from, state) do
     Serial.send_data(state[:serial], <<@report_analog ||| pin, value>>)
     {:reply, :ok, state}
   end
@@ -106,7 +135,14 @@ defmodule Firmata.Board do
   end
 
   def handle_info({:analog_read, pin, value }, state) do
-    IO.puts "#{pin} #{value}"
+    # find who is intrested in this, and send the info
+    state[:subscriptions]
+    |> Enum.filter(fn({_pid, name, sub_pin}) ->
+      sub_pin == pin && name == :analog_read
+    end)
+    |> Enum.each(fn({pid, :analog_read, pin}) ->
+      send(pid, {:analog_read, pin, value})
+    end)
     {:noreply, state}
   end
 
