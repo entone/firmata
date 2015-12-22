@@ -2,6 +2,14 @@ defmodule Firmata.Board do
   use GenServer
   use Firmata.Protocol.Mixin
 
+  @initial_state [
+    pins: [],
+    outbox: [],
+    parser: {},
+    serial: nil,
+    connected: false
+  ]
+
   @doc """
   {:ok, board} = Firmata.Board.start_link "/dev/cu.usbmodem1421"
   """
@@ -41,16 +49,9 @@ defmodule Firmata.Board do
     {:ok, serial} = Serial.start_link
     Serial.open(serial, tty)
     Serial.set_speed(serial, baudrate)
-    state = [
-      pins: [],
-      outbox: [],
-      parser: {},
-      serial: serial,
-      connected: false
-    ]
     board = self
     spawn_link(fn()-> process_outbox(board) end)
-    {:ok, state}
+    {:ok, @initial_state |> Keyword.put(:serial, serial)}
   end
 
   defp process_outbox(board) do
