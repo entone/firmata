@@ -92,7 +92,7 @@ defmodule Firmata.Board do
   def handle_call({:subscribe, pid, {:analog_read, pin}}, _from, state) do
     sub = {pid, :analog_read, pin}
     subs = state[:subscriptions]
-    subs = [sub | subs]
+    subs = [sub | subs] |> Enum.uniq
     {:reply, {:ok, sub}, Keyword.put(state, :subscriptions, subs)}
   end
 
