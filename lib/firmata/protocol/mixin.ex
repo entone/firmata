@@ -71,6 +71,10 @@ defmodule Firmata.Protocol.Mixin do
       @analog_mapping_response 0x6a
       # internal: fixnum byte sysex command for firmware query and response
       @firmware_query 0x79
+
+      defp to_hex(<<byte>>) do
+        "0x"<>Integer.to_string(byte, 16)
+      end
     end
   end
 end

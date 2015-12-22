@@ -18,11 +18,11 @@ defmodule Firmata.Protocol.Sysex do
   end
 
   def parse(bad_byte, _sysex) do
-    IO.puts "Unrecognized sysex command #{Hexate.decode(bad_byte)}"
+    IO.puts "Unrecognized sysex command #{to_hex(bad_byte)}"
   end
 
   def firmware_query(sysex) do
-    Enum.slice(sysex, 4, Enum.count(sysex) - 5)
+    Enum.slice(sysex, 2, Enum.count(sysex) - 1)
     |> Enum.reject(fn(<<b>>)-> b === 0 end)
     |> Enum.join()
   end

@@ -7,29 +7,15 @@ defmodule Firmata.Board do
     pins: [],
     outbox: [],
     parser: {},
+    firmware_name: "",
     serial: nil,
-    connected: false
   ]
 
   @doc """
-  {:ok, board} = Firmata.Board.start_link "/dev/cu.usbmodem1421", 57600
+  {:ok, board} = Firmata.Board.start_link writeFunction
   """
-  def start_link(tty, baudrate, opts \\ []) do
-    GenServer.start_link(__MODULE__, [tty, baudrate], opts)
-  end
-
-  def connect(board) do
-    GenServer.call(board, :connect, 10000)
-    block_until_connected(board)
-    :ok
-  end
-
-  defp block_until_connected(board) do
-    unless connected?(board), do: block_until_connected(board)
-  end
-
-  def connected?(board) do
-    get(board, :connected)
+  def start_link(opts \\ []) do
+    GenServer.start_link(__MODULE__, self, opts)
   end
 
   def get(board, key) do
@@ -54,13 +40,10 @@ defmodule Firmata.Board do
 
   ## Server Callbacks
 
-  def init([tty, baudrate]) do
-    {:ok, serial} = Serial.start_link
-    Serial.open(serial, tty)
-    Serial.set_speed(serial, baudrate)
+  def init(owner) do
     board = self
     spawn_link(fn()-> process_outbox(board) end)
-    {:ok, @initial_state |> Keyword.put(:serial, serial)}
+    {:ok, @initial_state |> Keyword.put(:serial, owner)}
   end
 
   defp process_outbox(board) do
@@ -81,11 +64,6 @@ defmodule Firmata.Board do
     {:reply, :ok, Keyword.put(state, key, value)}
   end
 
-  def handle_call(:connect, _from, state) do
-    Keyword.get(state, :serial) |> Serial.connect
-    {:reply, :ok, state}
-  end
-
   def handle_call({:subscribe, pid, {name, pin}}, _from, state) do
     sub = {pid, name, pin}
     subs = state[:subscriptions]
@@ -99,13 +77,21 @@ defmodule Firmata.Board do
     {:reply, :ok, Keyword.put(state, :subscriptions, subs)}
   end
 
+  defp send_data(pid, data) do
+    send(pid, {:firmata_board, :send_data, data})
+  end
+
+  defp send_info(pid, info) do
+    send(pid, {:firmata_board, info})
+  end
+
   def handle_call({:report_analog_pin, pin, value}, _from, state) do
-    Serial.send_data(state[:serial], <<@report_analog ||| pin, value>>)
+    send_data(state[:serial], <<@report_analog ||| pin, value>>)
     {:reply, :ok, state}
   end
 
   def handle_info({:report_version, major, minor }, state) do
-    Serial.send_data(state[:serial], <<@start_sysex, @capability_query, @end_sysex>>)
+    send_data(state[:serial], <<@start_sysex, @capability_query, @end_sysex>>)
     {:noreply, Keyword.put(state, :version, {major, minor})}
   end
 
@@ -115,7 +101,7 @@ defmodule Firmata.Board do
 
   def handle_info({:capability_response, pins }, state) do
     state = Keyword.put(state, :pins, pins)
-    Serial.send_data(state[:serial], <<@start_sysex, @analog_mapping_query, @end_sysex>>)
+    send_data(state[:serial], <<@start_sysex, @analog_mapping_query, @end_sysex>>)
     {:noreply, state}
   end
 
@@ -123,7 +109,8 @@ defmodule Firmata.Board do
     pins = Enum.zip(state[:pins], mapping)
     |> Enum.map(fn({pin, map})-> Keyword.merge(pin, map) end)
     state = Keyword.put(state, :pins, pins)
-    |> Keyword.put(:connected, true)
+    # XXX Defining readiness as such could pose problems for XBee users
+    send_info(state[:serial], {:ready, state[:version], state[:firmware_name], state[:pins]})
     {:noreply, state}
   end
 
@@ -133,12 +120,12 @@ defmodule Firmata.Board do
       sub_pin == pin && name == :analog_read
     end)
     |> Enum.each(fn({pid, :analog_read, pin}) ->
-      send(pid, {:analog_read, pin, value})
+      send_info(pid, {:analog_read, pin, value})
     end)
     {:noreply, state}
   end
 
-  def handle_info({:elixir_serial, _serial, data}, state) do
+  def handle_info({:serial, data}, state) do
     acc = Firmata.Protocol.State.unpack(state)
     acc = Enum.reduce(data, acc, &Firmata.Protocol.parse(&2, &1))
     state = Firmata.Protocol.State.pack(acc, state)

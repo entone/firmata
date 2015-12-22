@@ -38,7 +38,7 @@ defmodule Firmata.Protocol do
   end
 
   def parse(protocol_state, byte) do
-    IO.puts "unknown: #{Hexate.encode(byte)}"
+    IO.inspect "unknown: #{to_hex(byte)}"
     protocol_state
   end
 end
