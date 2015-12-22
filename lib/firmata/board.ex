@@ -12,7 +12,7 @@ defmodule Firmata.Board do
   ]
 
   @doc """
-  {:ok, board} = Firmata.Board.start_link "/dev/cu.usbmodem1421"
+  {:ok, board} = Firmata.Board.start_link "/dev/cu.usbmodem1421", 57600
   """
   def start_link(tty, baudrate, opts \\ []) do
     GenServer.start_link(__MODULE__, [tty, baudrate], opts)
@@ -86,11 +86,8 @@ defmodule Firmata.Board do
     {:reply, :ok, state}
   end
 
-  @doc """
-  Subscribe a process to analog pin value changes
-  """
-  def handle_call({:subscribe, pid, {:analog_read, pin}}, _from, state) do
-    sub = {pid, :analog_read, pin}
+  def handle_call({:subscribe, pid, {name, pin}}, _from, state) do
+    sub = {pid, name, pin}
     subs = state[:subscriptions]
     subs = [sub | subs] |> Enum.uniq
     {:reply, {:ok, sub}, Keyword.put(state, :subscriptions, subs)}
@@ -99,10 +96,6 @@ defmodule Firmata.Board do
   def handle_call({:unsubscribe, sub}, _from, state) do
     subs = state[:subscriptions]
     |> Enum.reject(fn(chk_sub)-> chk_sub == sub end)
-    ### TODO urgent
-    # If there are no subs for that given thing
-    # then just stop polling for that particular thing
-    # e.g. Firmata.Board.report_analog_pin(board, pin, 0)
     {:reply, :ok, Keyword.put(state, :subscriptions, subs)}
   end
 
@@ -135,7 +128,6 @@ defmodule Firmata.Board do
   end
 
   def handle_info({:analog_read, pin, value }, state) do
-    # find who is intrested in this, and send the info
     state[:subscriptions]
     |> Enum.filter(fn({_pid, name, sub_pin}) ->
       sub_pin == pin && name == :analog_read
