@@ -46,32 +46,38 @@ defmodule Firmata.Board do
     {:reply, :ok, state}
   end
 
-  def handle_info(:report_version, state) do
+  def handle_info({:report_version, major, minor }, state) do
+    IO.puts "got version: #{major}.#{minor}"
+    IO.puts "sending caps query"
     Serial.send_data(state[:serial], <<@start_sysex, @capability_query, @end_sysex>>)
-    {:noreply, state}
-  end
-
-  def handle_info({:major_version, major }, state) do
-    {:noreply, Keyword.put(state, :major_version, major)}
-  end
-
-  def handle_info({:minor_version, minor }, state) do
-    {:noreply, Keyword.put(state, :minor_version, minor)}
+    {:noreply, Keyword.put(state, :version, {major, minor})}
   end
 
   def handle_info({:firmware_name, name }, state) do
+    IO.puts "got firmware name: #{name}"
     {:noreply, Keyword.put(state, :firmware_name, name)}
   end
 
-  def handle_info({:pins, pins }, state) do
-    IO.inspect pins
-    {:noreply, Keyword.put(state, :pins, pins)}
+  def handle_info({:capability_response, pins }, state) do
+    IO.puts "got capabilities"
+    IO.puts "doing analog mapping query"
+    state = Keyword.put(state, :pins, pins) # |> Keyword.delete(:_protocol_state)
+    Serial.send_data(state[:serial], <<@start_sysex, @analog_mapping_query, @end_sysex>>)
+    {:noreply, state}
+  end
+
+  def handle_info({:analog_mapping_response, mapping }, state) do
+    IO.puts "got mapping"
+    IO.inspect mapping
+    {:noreply, state}
   end
 
   def handle_info({:elixir_serial, _serial, data}, state) do
     acc = Firmata.Protocol.Accumulator.unpack(state)
-    state = Enum.reduce(data, acc, &Firmata.Protocol.parse(&2, &1))
-    |> Firmata.Protocol.Accumulator.pack(state)
+    acc = Enum.reduce(data, acc, &Firmata.Protocol.parse(&2, &1))
+    outbox = elem(acc, 0)
+    IO.inspect outbox
+    state = Firmata.Protocol.Accumulator.pack(acc, state)
     {:noreply, state}
   end
 end

@@ -1,6 +1,9 @@
 defmodule Firmata.Protocol.Accumulator do
+  @doc """
+    {list:outbox, tuple:parser_state}
+  """
   def unpack(state) do
-    state[:_protocol_state] || {}
+    state[:_protocol_state] || {[], {}}
   end
 
   def pack(protocol_state, state) do

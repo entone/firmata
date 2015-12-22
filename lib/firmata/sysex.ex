@@ -6,7 +6,12 @@ defmodule Firmata.Protocol.Sysex do
   end
 
   def parse(<<@capability_response>>, sysex) do
-    {:pins, capability_response(sysex)[:pins]}
+    {:capability_response, capability_response(sysex)[:pins]}
+  end
+
+  def parse(<<@analog_mapping_response>>, sysex) do
+    IO.puts "analog mapping response"
+    {:analog_mapping_response, analog_mapping_response(sysex)}
   end
 
   def parse(<<unknown_command>>, _sysex) do
@@ -49,6 +54,17 @@ defmodule Firmata.Protocol.Sysex do
     len = Enum.count(sysex)
     sysex = Enum.slice(sysex, 2, len - 3)
     Enum.reduce(sysex, capstate, &capability_response/2)
+  end
+
+  def analog_mapping_response(sysex) do
+    # pin_index = 0
+    # current_buffer.slice(2, current_buffer.length - 3).each do |byte|
+    # @pins[pin_index].analog_channel = byte
+    # @analog_pins.push(pin_index) unless byte == 127
+    # pin_index += 1
+    # end
+
+
   end
 end
 
