@@ -1,6 +1,10 @@
 defmodule Firmata.Protocol.Sysex do
   use Firmata.Protocol.Mixin
 
+  def parse(<<@start_sysex, command, sysex>>) do
+    parse(command, sysex)
+  end
+
   def parse(<<@firmware_query>>, sysex) do
     {:firmware_name, firmware_query(sysex)}
   end

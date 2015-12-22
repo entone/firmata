@@ -18,11 +18,7 @@ defmodule Firmata.Protocol do
   end
 
   def parse({outbox, {:sysex, sysex}}, <<@end_sysex>>) do
-    sysex = sysex<><<@end_sysex>>
-    len = Enum.count(sysex)
-    command = Enum.slice(sysex, 1, 1) |> List.first
-    IO.inspect "sysex len #{len}, command: #{Hexate.encode(command)}"
-    {[ Firmata.Protocol.Sysex.parse(command, sysex) | outbox ], {}}
+    {[ Firmata.Protocol.Sysex.parse(sysex) | outbox ], {}}
   end
 
   def parse({outbox, {:sysex, sysex}}, byte) do

@@ -42,6 +42,7 @@ defmodule Firmata.Board do
     Serial.open(serial, tty)
     Serial.set_speed(serial, baudrate)
     state = [
+      pins: [],
       outbox: [],
       parser: {},
       serial: serial,
