@@ -31,6 +31,10 @@ defmodule Firmata.Board do
     GenServer.call(board, {:set, key, value})
   end
 
+  def report_analog_pin(board, pin, value) do
+    GenServer.call(board, {:report_analog_pin, pin, value})
+  end
+
   ## Server Callbacks
 
   def init([tty, baudrate]) do
@@ -71,6 +75,11 @@ defmodule Firmata.Board do
     {:reply, :ok, state}
   end
 
+  def handle_call({:report_analog_pin, pin, value}, {pid, _ref}, state) do
+    Serial.send_data(state[:serial], <<@report_analog ||| pin, value>>)
+    {:reply, :ok, state}
+  end
+
   def handle_info({:report_version, major, minor }, state) do
     Serial.send_data(state[:serial], <<@start_sysex, @capability_query, @end_sysex>>)
     {:noreply, Keyword.put(state, :version, {major, minor})}
@@ -91,6 +100,11 @@ defmodule Firmata.Board do
     |> Enum.map(fn({pin, map})-> Keyword.merge(pin, map) end)
     state = Keyword.put(state, :pins, pins)
     |> Keyword.put(:connected, true)
+    {:noreply, state}
+  end
+
+  def handle_info({:analog_read, pin, value }, state) do
+    IO.puts "#{pin} #{value}"
     {:noreply, state}
   end
 

@@ -29,6 +29,18 @@ defmodule Firmata.Protocol do
     {outbox, {:sysex, sysex <> byte }}
   end
 
+  def parse({outbox, {}}, <<byte>>) when byte in @analog_message_range do
+    {outbox, {:analog_read, byte &&& 0x0F}}
+  end
+
+  def parse({outbox, {:analog_read, pin}}, <<lsb>>) do
+    {outbox, {:analog_read, pin, lsb}}
+  end
+
+  def parse({outbox, {:analog_read, pin, lsb}}, <<msb>>) do 
+    {[{:analog_read, pin, lsb ||| (msb <<< 7)} | outbox], {}}
+  end
+
   def parse(protocol_state, byte) do
     IO.puts "unknown: #{Hexate.encode(byte)}"
     protocol_state
