@@ -4,6 +4,10 @@ This package implements the Firmata protocol in Elixir.
 
 Firmata is a MIDI-based protocol for communicating with microcontrollers.
 
+## Usage
+
+Coming soon... The API is still in flux
+
 ## Limitations
 
 * Implementing functionality on an as-needed basis, so not all functionality is implemented
@@ -19,7 +23,7 @@ Firmata is a MIDI-based protocol for communicating with microcontrollers.
 
 Because I am new to Elixir, I don't want to write too much code up-front, so I'm implementing only what I require.
 
-*Implemented*
+**Implemented**
 
 * Parser Mechanism
 * Connection Sequence
@@ -31,7 +35,7 @@ Because I am new to Elixir, I don't want to write too much code up-front, so I'm
 * Subscribing to messages (e.g. Analog Values)
 * Unsubscribing from messages
 
-*Will Implement*
+**Will Implement**
 
 * Digital Write
 * Digital Read
