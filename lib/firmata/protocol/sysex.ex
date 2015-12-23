@@ -22,8 +22,8 @@ defmodule Firmata.Protocol.Sysex do
   end
 
   def firmware_query(sysex) do
-    Enum.slice(sysex, 2, Enum.count(sysex) - 1)
-    |> Enum.reject(fn(<<b>>)-> b === 0 end)
+    sysex
+    |> Enum.filter(fn(<<b>>)-> b in 32..126 end)
     |> Enum.join()
   end
 
@@ -54,21 +54,19 @@ defmodule Firmata.Protocol.Sysex do
 
   def capability_response(sysex) do
     state = [supported_modes: 0, n: 0, pins: []]
-    Enum.slice(sysex, 2, Enum.count(sysex) - 3)
-    |> Enum.reduce(state, &capability_response/2)
+    sysex |> Enum.reduce(state, &capability_response/2)
   end
 
   def analog_mapping_response(<<127>>) do
-    [value: nil, analog_pin: false]
+    [value: nil, report: 0]
   end
 
   def analog_mapping_response(<<channel>>) do
-    [value: nil, analog_channel: channel, analog_pin: true]
+    [value: nil, analog_channel: channel, report: 0]
   end
 
   def analog_mapping_response(sysex) do
-    Enum.slice(sysex, 2, Enum.count(sysex) - 3)
-    |> Enum.map(&analog_mapping_response/1)
+    sysex |> Enum.map(&analog_mapping_response/1)
   end
 end
 
