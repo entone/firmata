@@ -89,7 +89,8 @@ defmodule Firmata.Board do
   end
 
   def handle_info({:analog_mapping_response, mapping }, state) do
-    pins = Enum.zip(state[:pins], mapping)
+    pins = state[:pins]
+    |> Enum.zip(mapping)
     |> Enum.map(fn({pin, map})-> Keyword.merge(pin, map) end)
     state = Keyword.put(state, :pins, pins)
     send_info(state, {:pin_map, state[:pins]})
