@@ -43,7 +43,7 @@ defmodule Firmata.Mixfile do
   defp package do
     [
       files: ["lib", "mix.exs", "README.md", "LICENSE"],
-      contributors: ["Keyvan Fatehi"],
+      maintainers: ["Keyvan Fatehi"],
       licenses: ["ISC"],
       links: %{
         "GitHub" => "https://github.com/kfatehi/firmata",
