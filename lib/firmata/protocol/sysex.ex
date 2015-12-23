@@ -27,25 +27,32 @@ defmodule Firmata.Protocol.Sysex do
     |> Enum.join()
   end
 
+  defp build_modes_array(supported_modes) do
+    Enum.reduce(@modes, [], fn(mode, modes) ->
+      case (supported_modes &&& (1 <<< mode)) do
+        0 -> modes
+        _ -> [ mode | modes]
+      end
+    end)
+  end
+
   def capability_response(<<byte>>, state) do
     cond do
       byte === 127 ->
-      modes_array = Enum.reduce(@modes, [], fn(mode, modes) ->
-        case (state[:supported_modes] &&& (1 <<< mode)) do
-          0 -> modes
-          _ -> [ mode | modes]
-        end
-      end)
-      pin = [
-        supported_modes: modes_array,
-        mode: @unknown
-      ]
-      Keyword.put(state, :pins, [ pin | state[:pins] ])
-      |> Keyword.put(:supported_modes, 0)
-      |> Keyword.put(:n, 0)
+        modes_array = state[:supported_modes]
+                      |> build_modes_array()
+        pin = [
+          supported_modes: modes_array,
+          mode: @unknown
+        ]
+        state
+        |> Keyword.put(:pins, [ pin | state[:pins] ])
+        |> Keyword.put(:supported_modes, 0)
+        |> Keyword.put(:n, 0)
       state[:n] === 0 ->
         supported_modes = state[:supported_modes] ||| (1 <<< byte);
-        Keyword.put(state, :supported_modes, supported_modes)
+        state
+        |> Keyword.put(:supported_modes, supported_modes)
         |> Keyword.put(:n, state[:n] ^^^ 1)
       true ->
         Keyword.put(state, :n, state[:n] ^^^ 1)
