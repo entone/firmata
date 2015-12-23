@@ -4,7 +4,7 @@ defmodule Firmata.Protocol.ProtocolTest do
 
   import Firmata.Protocol, only: [digital_write: 3]
 
-  doctest Firmata
+  doctest Firmata.Protocol
 
   test "(all pins low) digital write pin 10 from low to high" do
     data = @low_pins |> low(10) |> digital_write(10, @high)
