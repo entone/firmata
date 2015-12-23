@@ -1,6 +1,7 @@
 defmodule Firmata.Board do
   use GenServer
   use Firmata.Protocol.Mixin
+  alias Firmata.Protocol.State, as: ProtocolState
 
   @initial_state [
     pins: [],
@@ -105,9 +106,9 @@ defmodule Firmata.Board do
   end
 
   def handle_info({:serial, data}, state) do
-    acc = Firmata.Protocol.State.unpack(state)
+    acc = ProtocolState.unpack(state)
     acc = Enum.reduce(data, acc, &Firmata.Protocol.parse(&2, &1))
-    state = Firmata.Protocol.State.pack(acc, state)
+    state = ProtocolState.pack(acc, state)
     {:noreply, state}
   end
 

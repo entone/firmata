@@ -1,5 +1,6 @@
 defmodule Firmata.Protocol do
   use Firmata.Protocol.Mixin
+  alias Firmata.Protocol.Sysex, as: Sysex
 
   def parse({outbox, {}}, <<@report_version>>) do
     {outbox, {:report_version}}
@@ -18,7 +19,7 @@ defmodule Firmata.Protocol do
   end
 
   def parse({outbox, {:sysex, sysex}}, <<@end_sysex>>) do
-    {[ Firmata.Protocol.Sysex.parse(sysex) | outbox ], {}}
+    {[ Sysex.parse(sysex) | outbox ], {}}
   end
 
   def parse({outbox, {:sysex, sysex}}, byte) do
@@ -33,7 +34,7 @@ defmodule Firmata.Protocol do
     {outbox, {:analog_read, pin, lsb}}
   end
 
-  def parse({outbox, {:analog_read, pin, lsb}}, <<msb>>) do 
+  def parse({outbox, {:analog_read, pin, lsb}}, <<msb>>) do
     {[{:analog_read, pin, lsb ||| (msb <<< 7)} | outbox], {}}
   end
 
