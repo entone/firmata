@@ -59,11 +59,11 @@ defmodule Firmata.Protocol.Sysex do
   end
 
   def analog_mapping_response(<<127>>) do
-    [analog_pin: false]
+    [value: nil, analog_pin: false]
   end
 
   def analog_mapping_response(<<channel>>) do
-    [analog_channel: channel, analog_pin: true]
+    [value: nil, analog_channel: channel, analog_pin: true]
   end
 
   def analog_mapping_response(sysex) do
