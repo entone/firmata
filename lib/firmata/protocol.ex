@@ -41,4 +41,17 @@ defmodule Firmata.Protocol do
     IO.inspect "unknown: #{to_hex(byte)}"
     protocol_state
   end
+
+  def digital_write(pins, pin, value) do
+    port = pin / 8 |> Float.floor |> round
+    port_value = Enum.reduce(0..8, 0, fn(i, acc) ->
+      index = 8 * port + i
+      pin_record = Enum.at(pins, index)
+      cond do
+        pin_record && pin_record[:value] === 1 -> acc ||| (1 <<< i)
+        true -> acc
+      end
+    end)
+    <<@digital_message ||| port, port_value &&& 0x7F, (port_value >>> 7) &&& 0x7F>>
+  end
 end
