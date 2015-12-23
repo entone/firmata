@@ -38,7 +38,8 @@ defmodule Firmata.Protocol do
   end
 
   def parse(protocol_state, byte) do
-    IO.inspect "unknown: #{to_hex(byte)}"
+    # IO.inspect "unknown: #{to_hex(byte)}"
+    # We ignore what we do not understand
     protocol_state
   end
 
