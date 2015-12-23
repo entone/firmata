@@ -6,8 +6,6 @@ Firmata is a MIDI-based protocol for communicating with microcontrollers.
 
 ## Feature Completeness
 
-Because I am new to Elixir, I don't want to write too much code up-front, so I'm implementing only what I require.
-
 **Implemented**
 
 * Parser
@@ -20,7 +18,7 @@ Because I am new to Elixir, I don't want to write too much code up-front, so I'm
 * Set Pin Mode
 * Digital Write
 
-**Will Implement**
+**Planned**
 
 * Digital Read
 
