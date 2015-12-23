@@ -2,38 +2,7 @@ defmodule Firmata.Protocol.Mixin do
   defmacro __using__(_) do
     quote location: :keep do
       use Bitwise
-
-      @input 0x00
-      @output 0x01
-      @analog 0x02
-      @pwm 0x03
-      @servo 0x04
-      @shift 0x05
-      @i2c 0x06
-      @onewire 0x07
-      @stepper 0x08
-      @serial 0x0a
-      @ignore 0x7f
-      @ping_read 0x75
-      @unknown 0x10
-
-      @modes [
-        @input,
-        @output,
-        @analog,
-        @pwm,
-        @servo,
-        @shift,
-        @i2c,
-        @onewire,
-        @stepper,
-        @serial,
-        @ignore,
-        @ping_read,
-        @unknown
-      ]
-      @low  0
-      @high 1
+      use Firmata.Protocol.Modes
 
       # Internal: Fixnum byte command for protocol version
       @report_version 0xF9
