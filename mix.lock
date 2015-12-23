@@ -1,1 +1,2 @@
-%{"serial": {:hex, :serial, "0.1.1"}}
+%{"bunt": {:hex, :bunt, "0.1.4"},
+  "credo": {:hex, :credo, "0.2.4"}}
