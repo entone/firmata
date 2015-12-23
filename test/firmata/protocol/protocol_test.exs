@@ -1,5 +1,6 @@
 defmodule Firmata.Protocol.ProtocolTest do
-  use FirmataTest.Mixin
+  use ExUnit.Case, async: true
+  use FirmataTest.Helper
 
   import Firmata.Protocol, only: [digital_write: 3]
 

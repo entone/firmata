@@ -1,7 +1,6 @@
-defmodule FirmataTest.Mixin do
+defmodule FirmataTest.Helper do
   defmacro __using__(_) do
     quote location: :keep do
-      use ExUnit.Case
       use Firmata.Protocol.Mixin
       @low_pins 1..20 |> Enum.map(fn(_) -> [value: 0] end)
       @high_pins 1..20 |> Enum.map(fn(_) -> [value: 1] end)
