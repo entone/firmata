@@ -57,4 +57,11 @@ defmodule Firmata.Protocol do
     end)
     <<@digital_message ||| port, port_value &&& 0x7F, (port_value >>> 7) &&& 0x7F>>
   end
+
+  defp print_binary(binary) do
+    binary
+    |> Enum.map(fn(<<int>>)-> int end)
+    |> Enum.join(",")
+    |> IO.puts
+  end
 end
