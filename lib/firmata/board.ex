@@ -10,9 +10,6 @@ defmodule Firmata.Board do
     interface: nil,
   ]
 
-  @doc """
-  {:ok, board} = Firmata.Board.start_link writeFunction
-  """
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, self, opts)
   end
@@ -25,8 +22,16 @@ defmodule Firmata.Board do
     GenServer.call(board, {:set, key, value})
   end
 
-  def report_analog_pin(board, pin, value) do
-    GenServer.call(board, {:report_analog_pin, pin, value})
+  def report_analog_channel(board, channel, value) do
+    GenServer.call(board, {:report_analog_channel, channel, value})
+  end
+
+  def set_pin_mode(board, pin, mode) do
+    GenServer.call(board, {:set_pin_mode, pin, mode})
+  end
+
+  def digital_write(board, pin, value) do
+    GenServer.call(board, {:digital_write, pin, value})
   end
 
   ## Server Callbacks
@@ -37,16 +42,6 @@ defmodule Firmata.Board do
     {:ok, @initial_state |> Keyword.put(:interface, interface)}
   end
 
-  defp process_outbox(board) do
-    outbox = get(board, :outbox)
-    if Enum.count(outbox) > 0 do
-      [message | tail] = outbox
-      set(board, :outbox, tail)
-      send(board, message)
-    end
-    process_outbox(board)
-  end
-
   def handle_call({:get, key}, _from, state) do
     {:reply, Keyword.get(state, key), state}
   end
@@ -55,8 +50,22 @@ defmodule Firmata.Board do
     {:reply, :ok, Keyword.put(state, key, value)}
   end
 
-  def handle_call({:report_analog_pin, pin, value}, _from, state) do
-    send_data(state, <<@report_analog ||| pin, value>>)
+  def handle_call({:report_analog_channel, channel, value}, _from, state) do
+    state = state |> put_analog_channel(channel, :report, value)
+    send_data(state, <<@report_analog ||| channel, value>>)
+    {:reply, :ok, state}
+  end
+
+  def handle_call({:set_pin_mode, pin, mode}, _from, state) do
+    state = state |> put_pin(pin, :mode, mode)
+    send_data(state, <<@pin_mode,pin,mode>>)
+    {:reply, :ok, state}
+  end
+
+  def handle_call({:digital_write, pin, value}, _from, state) do
+    state = state |> put_pin(pin, :value, value)
+    signal = state[:pins] |> Firmata.Protocol.digital_write(pin, value)
+    send_data(state, signal)
     {:reply, :ok, state}
   end
 
@@ -87,8 +96,10 @@ defmodule Firmata.Board do
     {:noreply, state}
   end
 
-  def handle_info({:analog_read, pin, value }, state) do
-    send_info(state, {:analog_read, pin, value})
+  def handle_info({:analog_read, channel, value }, state) do
+    state = state |> put_analog_channel(channel, :value, value, fn(pin) ->
+      send_info(state, {:analog_read, pin[:analog_channel], value})
+    end)
     {:noreply, state}
   end
 
@@ -102,4 +113,30 @@ defmodule Firmata.Board do
   defp send_data(state, data), do: send_to(state[:interface], {:send_data, data})
   defp send_info(state, info), do: send_to(state[:interface], info)
   defp send_to(pid, message), do: send(pid, {:firmata, message})
+  defp put_pin(state, index, key, value, found_callback \\ nil) do
+    pins = state[:pins] |> List.update_at(index, fn(pin) ->
+      pin = Keyword.put(pin, key, value)
+      if (found_callback), do: found_callback.(pin)
+      pin
+    end)
+    state = Keyword.put(state, :pins, pins)
+  end
+  defp analog_channel_to_pin_index(state, channel) do
+    Enum.find_index(state[:pins], fn(pin) ->
+      pin[:analog_channel] === channel
+    end)
+  end
+  defp put_analog_channel(state, channel, key, value, found_callback \\ nil) do
+    pin = analog_channel_to_pin_index(state, channel)
+    put_pin(state, pin, key, value, found_callback)
+  end
+  defp process_outbox(board) do
+    outbox = get(board, :outbox)
+    if Enum.count(outbox) > 0 do
+      [message | tail] = outbox
+      set(board, :outbox, tail)
+      send(board, message)
+    end
+    process_outbox(board)
+  end
 end
