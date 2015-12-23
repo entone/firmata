@@ -7,6 +7,8 @@ defmodule Firmata.Mixfile do
      elixir: "~> 1.1",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
+     description: description,
+     package: package,
      deps: deps]
   end
 
@@ -27,8 +29,28 @@ defmodule Firmata.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
+    []
+  end
+
+  defp description do
+    """
+    This package implements the Firmata protocol.
+
+    Firmata is a MIDI-based protocol for communicating with microcontrollers.
+
+    More information about Firmata can be found here
+    """
+  end
+
+  defp package do
     [
-      {:credo, "~> 0.2", only: [:dev, :test]}
+      files: ["lib", "mix.exs", "README.md", "LICENSE"],
+      contributors: ["Keyvan Fatehi"],
+      licenses: ["ISC"],
+      links: %{
+        "GitHub" => "https://github.com/kfatehi/firmata",
+        "Protocol" => "https://github.com/firmata/protocol"
+      }
     ]
   end
 end
