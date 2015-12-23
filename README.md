@@ -90,7 +90,7 @@ defmodule App do
   end
 
   def handle_info({:firmata, {:analog_read, 3, value}}, state) do
-    IO.inspect "analog pin 5: #{value}"
+    IO.inspect "analog channel 3 reports value: #{value}"
     {:noreply, state}
   end
 end
