@@ -37,8 +37,6 @@ defmodule Firmata.Mixfile do
     This package implements the Firmata protocol.
 
     Firmata is a MIDI-based protocol for communicating with microcontrollers.
-
-    More information about Firmata can be found here
     """
   end
 
@@ -49,7 +47,7 @@ defmodule Firmata.Mixfile do
       licenses: ["ISC"],
       links: %{
         "GitHub" => "https://github.com/kfatehi/firmata",
-        "Protocol" => "https://github.com/firmata/protocol"
+        "Firmata Protocol" => "https://github.com/firmata/protocol"
       }
     ]
   end
