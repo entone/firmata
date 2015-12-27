@@ -6,6 +6,7 @@ defmodule Firmata.Board do
   @initial_state [
     pins: [],
     outbox: [],
+    processor_pid: nil,
     parser: {},
     firmware_name: "",
     interface: nil,
@@ -13,6 +14,10 @@ defmodule Firmata.Board do
 
   def start_link(opts \\ []) do
     GenServer.start_link(__MODULE__, self, opts)
+  end
+
+  def stop(pid) do
+    GenServer.call(pid, :stop)
   end
 
   def get(board, key) do
@@ -39,8 +44,15 @@ defmodule Firmata.Board do
 
   def init(interface) do
     board = self
-    spawn_link(fn()-> process_outbox(board) end)
-    {:ok, @initial_state |> Keyword.put(:interface, interface)}
+    state = @initial_state |> Keyword.put(:interface, interface)
+    processor_pid = spawn_link(fn()-> process_outbox(board) end)
+    state = Keyword.put(state, :processor_pid, processor_pid)
+    {:ok, state}
+  end
+
+  def handle_call(:stop, _from, state) do
+    Process.exit(state[:processor_pid], :normal)
+    {:reply, :ok, state}
   end
 
   def handle_call({:get, key}, _from, state) do
