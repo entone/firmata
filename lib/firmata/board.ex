@@ -40,6 +40,10 @@ defmodule Firmata.Board do
     GenServer.call(board, {:digital_write, pin, value})
   end
 
+  def sysex_write(board, cmd, data) do
+    GenServer.call(board, {:sysex_write, cmd, data})
+  end
+
   ## Server Callbacks
 
   def init(interface) do
@@ -79,6 +83,12 @@ defmodule Firmata.Board do
     state = state |> put_pin(pin, :value, value)
     signal = state[:pins] |> Firmata.Protocol.digital_write(pin, value)
     send_data(state, signal)
+    {:reply, :ok, state}
+  end
+
+  def handle_call({:sysex_write, cmd, data}, _from, state) do
+
+    send_data(state, <<@start_sysex, cmd>> <> data <> <<@end_sysex>>)
     {:reply, :ok, state}
   end
 
