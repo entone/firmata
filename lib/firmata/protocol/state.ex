@@ -4,8 +4,6 @@ defmodule Firmata.Protocol.State do
   end
 
   def pack({outbox, parser}, state) do
-    state
-    |> Keyword.put(:outbox, outbox)
-    |> Keyword.put(:parser, parser)
+    %{state | outbox: outbox, parser: parser}
   end
 end
