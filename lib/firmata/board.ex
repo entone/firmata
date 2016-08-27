@@ -10,23 +10,17 @@ defmodule Firmata.Board do
     parser: {},
     firmware_name: "",
     interface: nil,
+    serial: nil
   }
 
-  def start_link(opts \\ []) do
-    GenServer.start_link(__MODULE__, self, opts)
+  def start_link(port, opts \\ []) do
+    opts = Keyword.put(opts, :interface, self)
+    GenServer.start_link(__MODULE__, {port, opts})
   end
 
   def stop(pid) do
     GenServer.call(pid, :stop)
   end
-
-  # def get(board, key) do
-  #   GenServer.call(board, {:get, key})
-  # end
-  #
-  # def set(board, key, value) do
-  #   GenServer.call(board, {:set, key, value})
-  # end
 
   def report_analog_channel(board, channel, value) do
     GenServer.call(board, {:report_analog_channel, channel, value})
@@ -46,11 +40,20 @@ defmodule Firmata.Board do
 
   ## Server Callbacks
 
-  def init(interface) do
-    board = self
-    state = @initial_state |> Map.put(:interface, interface)
-    #processor_pid = spawn_link(fn()-> process_outbox(board) end)
-    #state = Keyword.put(state, :processor_pid, processor_pid)
+  def init({port, opts}) do
+    speed = opts[:speed] || 57600
+    uart_opts = [speed: speed, active: true]
+
+    {:ok, serial} = Nerves.UART.start_link
+    :ok = Nerves.UART.open(serial, port, uart_opts)
+
+    Nerves.UART.write(serial, <<0xFF>>)
+    Nerves.UART.write(serial, <<0xF9>>)
+
+    state =
+      @initial_state
+      |> Map.put(:serial, serial)
+      |> Map.put(:interface, opts[:interface])
     {:ok, state}
   end
 
@@ -92,6 +95,12 @@ defmodule Firmata.Board do
     {:reply, :ok, state}
   end
 
+  def handle_info({:nerves_uart, _port, data}, state) do
+    {outbox, parser} = Enum.reduce(data, {state.outbox, state.parser}, &Firmata.Protocol.parse(&2, &1))
+    Enum.each(outbox, &send(self, &1))
+    {:noreply, %{state | outbox: [], parser: parser}}
+  end
+
   def handle_info({:report_version, major, minor }, state) do
     send_data(state, <<@start_sysex, @capability_query, @end_sysex>>)
     state = Map.put(state, :version, {major, minor})
@@ -127,17 +136,9 @@ defmodule Firmata.Board do
     {:noreply, state}
   end
 
-  def handle_info({:serial, data}, state) do
-    acc = ProtocolState.unpack(state)
-    acc = Enum.reduce(data, acc, &Firmata.Protocol.parse(&2, &1))
-    state = ProtocolState.pack(acc, state)
-    Enum.each(state.outbox, &send(self, &1))
-    {:noreply, %{state | outbox: []}}
-  end
-
-  defp send_data(state, data), do: send_to(state[:interface], {:send_data, data})
-  defp send_info(state, info), do: send_to(state[:interface], info)
-  defp send_to(pid, message), do: send(pid, {:firmata, message})
+  defp send_data(state, data), do: Nerves.UART.write(state.serial, data)
+  defp send_info(state, info), do: send_to(state[:interface], {:firmata, info})
+  defp send_to(interface, message), do: send(interface, message)
   defp put_pin(state, index, key, value, found_callback \\ nil) do
     pins = state[:pins] |> List.update_at(index, fn(pin) ->
       pin = Keyword.put(pin, key, value)

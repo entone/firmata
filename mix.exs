@@ -29,7 +29,7 @@ defmodule Firmata.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    []
+    [{:nerves_uart, "~> 0.1"}]
   end
 
   defp description do
