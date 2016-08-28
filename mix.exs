@@ -16,7 +16,7 @@ defmodule Firmata.Mixfile do
   #
   # Type "mix help compile.app" for more information
   def application do
-    [applications: [:logger]]
+    [applications: [:logger, :nerves_uart]]
   end
 
   # Dependencies can be Hex packages:
