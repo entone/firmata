@@ -41,10 +41,20 @@ defmodule Firmata.Protocol.Mixin do
       # internal: fixnum byte sysex command for firmware query and response
       @firmware_query 0x79
 
-      defp to_hex(<<byte>>) do
+      @i2c_config 0x78
+
+      @i2c_request 0x76
+
+      @i2c_response 0x77
+
+      @i2c_mode %{write: 00, read: 10}
+
+      @string_data 0x71
+
+
+      def to_hex(<<byte>>) do
         "0x"<>Integer.to_string(byte, 16)
       end
     end
   end
 end
-

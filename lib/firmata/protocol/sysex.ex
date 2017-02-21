@@ -17,8 +17,17 @@ defmodule Firmata.Protocol.Sysex do
     {:analog_mapping_response, analog_mapping_response(sysex)}
   end
 
-  def parse(bad_byte, _sysex) do
-    IO.puts "Unrecognized sysex command #{to_hex(bad_byte)}"
+  def parse(@i2c_response, sysex) do
+    {:i2c_response, binary(sysex)}
+  end
+
+  def parse(@string_data, sysex) do
+    {:string_data, binary(sysex)}
+  end
+
+  def parse(bad_byte, sysex) do
+    IO.puts bad_byte
+    IO.puts sysex
   end
 
   def firmware_query(sysex) do
@@ -75,5 +84,8 @@ defmodule Firmata.Protocol.Sysex do
   def analog_mapping_response(sysex) do
     sysex |> Enum.map(&analog_mapping_response/1)
   end
-end
 
+  def binary(sysex) do
+    [value: sysex]
+  end
+end

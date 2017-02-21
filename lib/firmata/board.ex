@@ -1,6 +1,7 @@
 defmodule Firmata.Board do
   use GenServer
   use Firmata.Protocol.Mixin
+  require Logger
   alias Firmata.Protocol.State, as: ProtocolState
 
   @initial_state %{
@@ -13,9 +14,9 @@ defmodule Firmata.Board do
     serial: nil
   }
 
-  def start_link(port, opts \\ []) do
+  def start_link(port, opts \\ [], name \\ nil) do
     opts = Keyword.put(opts, :interface, self)
-    GenServer.start_link(__MODULE__, {port, opts})
+    GenServer.start_link(__MODULE__, {port, opts}, name: name)
   end
 
   def stop(pid) do
@@ -62,16 +63,10 @@ defmodule Firmata.Board do
     {:reply, :ok, state}
   end
 
-  # def handle_call({:get, key}, _from, state) do
-  #   {:reply, Keyword.get(state, key), state}
-  # end
-  #
-  # def handle_call({:set, key, value}, _from, state) do
-  #   {:reply, :ok, Keyword.put(state, key, value)}
-  # end
-
-  def handle_call({:report_analog_channel, channel, value}, _from, state) do
-    state = state |> put_analog_channel(channel, :report, value)
+  def handle_call({:report_analog_channel, channel, value}, {interface, _}, state) do
+    state = state
+    |> put_analog_channel(channel, :report, value)
+    |> put_analog_channel(channel, :interface, interface)
     send_data(state, <<@report_analog ||| channel, value>>)
     {:reply, :ok, state}
   end
@@ -90,7 +85,6 @@ defmodule Firmata.Board do
   end
 
   def handle_call({:sysex_write, cmd, data}, _from, state) do
-
     send_data(state, <<@start_sysex, cmd>> <> data <> <<@end_sysex>>)
     {:reply, :ok, state}
   end
@@ -101,29 +95,33 @@ defmodule Firmata.Board do
     {:noreply, %{state | outbox: [], parser: parser}}
   end
 
-  def handle_info({:report_version, major, minor }, state) do
+  def handle_info({:report_version, major, minor}, state) do
     send_data(state, <<@start_sysex, @capability_query, @end_sysex>>)
     state = Map.put(state, :version, {major, minor})
     send_info(state, {:version, major, minor})
     {:noreply, state}
   end
 
-  def handle_info({:firmware_name, name }, state) do
+  def handle_info({:firmware_name, name}, state) do
     state = Map.put(state, :firmware_name, name)
     send_info(state, {:firmware_name, state[:firmware_name]})
     {:noreply, state}
   end
 
-  def handle_info({:capability_response, pins }, state) do
+  def handle_info({:capability_response, pins}, state) do
+    Logger.info "#{inspect pins}"
     state = Map.put(state, :pins, pins)
     send_data(state, <<@start_sysex, @analog_mapping_query, @end_sysex>>)
     {:noreply, state}
   end
 
-  def handle_info({:analog_mapping_response, mapping }, state) do
+  def handle_info({:analog_mapping_response, mapping}, state) do
+    Logger.info "#{inspect mapping}"
     pins = state[:pins]
     |> Enum.zip(mapping)
+    |> IO.inspect
     |> Enum.map(fn({pin, map})-> Keyword.merge(pin, map) end)
+    |> Enum.map(fn pin -> Keyword.merge(pin, [interface: nil]) end)
     state = Map.put(state, :pins, pins)
     send_info(state, {:pin_map, state[:pins]})
     {:noreply, state}
@@ -131,13 +129,28 @@ defmodule Firmata.Board do
 
   def handle_info({:analog_read, channel, value }, state) do
     state = state |> put_analog_channel(channel, :value, value, fn(pin) ->
-      send_info(state, {:analog_read, pin[:analog_channel], value})
+      send_info(state, {:analog_read, pin[:analog_channel], value}, pin[:interface])
     end)
     {:noreply, state}
   end
 
+  def handle_info({:i2c_response, [value: value] }, state) do
+    send_info(state, {:i2c_response, value})
+    {:noreply, state}
+  end
+
+  def handle_info({:string_data, [value: value] }, state) do
+    send_info(state, {:string_data, value |> parse_ascii})
+    {:noreply, state}
+  end
+
   defp send_data(state, data), do: Nerves.UART.write(state.serial, data)
-  defp send_info(state, info), do: send_to(state[:interface], {:firmata, info})
+  defp send_info(state, info, interface \\ nil) do
+    case interface do
+      nil -> send_to(state[:interface], {:firmata, info})
+      _ -> send_to(interface, {:firmata, info})
+    end
+  end
   defp send_to(interface, message), do: send(interface, message)
   defp put_pin(state, index, key, value, found_callback \\ nil) do
     pins = state[:pins] |> List.update_at(index, fn(pin) ->
@@ -156,5 +169,7 @@ defmodule Firmata.Board do
     pin = analog_channel_to_pin_index(state, channel)
     put_pin(state, pin, key, value, found_callback)
   end
+
+  defp parse_ascii(data), do: for n <- data, n != <<0>>, into: "", do: n
 
 end
