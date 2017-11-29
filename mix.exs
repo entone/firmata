@@ -29,7 +29,10 @@ defmodule Firmata.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:nerves_uart, "~> 0.1"}]
+    [
+      {:nerves_uart, "~> 0.1.2"},
+      {:ex_doc, ">= 0.0.0", only: :dev}
+    ]
   end
 
   defp description do
@@ -43,10 +46,10 @@ defmodule Firmata.Mixfile do
   defp package do
     [
       files: ["lib", "mix.exs", "README.md", "LICENSE"],
-      maintainers: ["Keyvan Fatehi"],
+      maintainers: ["Keyvan Fatehi", "Christopher Coté"],
       licenses: ["ISC"],
       links: %{
-        "GitHub" => "https://github.com/kfatehi/firmata",
+        "GitHub" => "https://github.com/entone/firmata",
         "Firmata Protocol" => "https://github.com/firmata/protocol"
       }
     ]
