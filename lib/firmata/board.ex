@@ -35,6 +35,15 @@ defmodule Firmata.Board do
     GenServer.call(board, {:digital_write, pin, value})
   end
 
+  def sonar_config(board, trigger, echo, max_distance, ping_interval) do
+    set_pin_mode(board, trigger, @sonar)
+    set_pin_mode(board, echo, @sonar)
+    max_distance_lsb = max_distance &&& 0x7f
+    max_distance_msb = (max_distance >>> 7) &&& 0x7f
+    data = <<trigger, echo, ping_interval, max_distance_lsb, max_distance_msb>>
+    board |> sysex_write(@sonar_config, data)
+  end
+
   def sysex_write(board, cmd, data) do
     GenServer.call(board, {:sysex_write, cmd, data})
   end
@@ -141,6 +150,11 @@ defmodule Firmata.Board do
 
   def handle_info({:string_data, [value: value] }, state) do
     send_info(state, {:string_data, value |> parse_ascii})
+    {:noreply, state}
+  end
+
+  def handle_info({:sonar_data, [value: value, pin: pin]}, state) do
+    send_info(state, {:sonar_data, pin, value})
     {:noreply, state}
   end
 

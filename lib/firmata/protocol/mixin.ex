@@ -51,6 +51,10 @@ defmodule Firmata.Protocol.Mixin do
 
       @string_data 0x71
 
+      # custom for sonar range sensors
+      @sonar_config 0x62  # configure pins to control a Ping type sonar distance device
+      @sonar_data 0x63  # distance data returned
+
 
       def to_hex(<<byte>>) do
         "0x"<>Integer.to_string(byte, 16)

@@ -13,6 +13,7 @@ defmodule Firmata.Protocol.Modes do
       @serial 0x0a
       @ignore 0x7f
       @ping_read 0x75
+      @sonar 0x0b
       @unknown 0x10
 
       @modes [
@@ -28,6 +29,7 @@ defmodule Firmata.Protocol.Modes do
         @serial,
         @ignore,
         @ping_read,
+        @sonar,
         @unknown
       ]
     end
