@@ -40,7 +40,7 @@ defmodule Firmata.Board do
     set_pin_mode(board, echo, @sonar)
     max_distance_lsb = max_distance &&& 0x7f
     max_distance_msb = (max_distance >>> 7) &&& 0x7f
-    data = <<trigger, echo, ping_interval, max_distance_lsb, max_distance_msb>>
+    data = <<trigger, echo, max_distance_lsb, max_distance_msb, ping_interval>>
     board |> sysex_write(@sonar_config, data)
   end
 
