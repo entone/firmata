@@ -31,6 +31,10 @@ defmodule Firmata.Board do
     GenServer.call(board, {:set_pin_mode, pin, mode})
   end
 
+  def pin_state(board, pin) do
+    board |> sysex_write(@pin_state_query, <<pin>>)
+  end
+
   def digital_write(board, pin, value) do
     GenServer.call(board, {:digital_write, pin, value})
   end
@@ -155,6 +159,11 @@ defmodule Firmata.Board do
 
   def handle_info({:sonar_data, [value: value, pin: pin]}, state) do
     send_info(state, {:sonar_data, pin, value})
+    {:noreply, state}
+  end
+
+  def handle_info({:pin_state, pin, mode, pin_state}, state) do
+    send_info(state, {:pin_state, pin, mode, pin_state})
     {:noreply, state}
   end
 

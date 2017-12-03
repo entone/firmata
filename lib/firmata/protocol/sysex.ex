@@ -30,6 +30,10 @@ defmodule Firmata.Protocol.Sysex do
     {:sonar_data, sonar_data(sysex)}
   end
 
+  def parse(@pin_state_response, <<pin, mode, state>>) do
+    {:pin_state, pin, mode, state}
+  end
+
   def parse(bad_byte, sysex) do
     IO.puts bad_byte
     IO.puts sysex
