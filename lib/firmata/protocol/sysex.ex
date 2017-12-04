@@ -35,8 +35,6 @@ defmodule Firmata.Protocol.Sysex do
   end
 
   def parse(bad_byte, sysex) do
-    IO.puts bad_byte
-    IO.puts sysex
   end
 
   def firmware_query(sysex) do

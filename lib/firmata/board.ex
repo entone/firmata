@@ -167,6 +167,11 @@ defmodule Firmata.Board do
     {:noreply, state}
   end
 
+  def handle_info(unknown, state) do
+    Logger.error("Unknown message in #{__MODULE__}: #{inspect unknown}")
+    {:noreply, state}
+  end
+
   defp send_data(state, data), do: Nerves.UART.write(state.serial, data)
   defp send_info(state, info, interface \\ nil) do
     case interface do
