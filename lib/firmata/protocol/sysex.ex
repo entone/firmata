@@ -100,4 +100,8 @@ defmodule Firmata.Protocol.Sysex do
     val = (msb <<< 7) + lsb
     [value: val, pin: trigger]
   end
+
+  def sonar_data(<<sysex>>) do
+    [value: nil, pin: nil]
+  end
 end
