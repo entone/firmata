@@ -55,6 +55,11 @@ defmodule Firmata.Protocol.Mixin do
       @sonar_config 0x62  # configure pins to control a Ping type sonar distance device
       @sonar_data 0x63  # distance data returned
 
+      #custom for neopixels
+      @neopixel_register 0x74 #arg0 pin_number, arg1 num_pixels
+      @neopixel_brightness 0x73 #arg0 brightness
+      @neopixel 0x72 #arg0 pixel_index, arg1 red, arg2 green, arg3 blue
+
 
       def to_hex(<<byte>>) do
         "0x"<>Integer.to_string(byte, 16)

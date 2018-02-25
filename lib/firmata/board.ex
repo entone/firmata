@@ -48,6 +48,21 @@ defmodule Firmata.Board do
     board |> sysex_write(@sonar_config, data)
   end
 
+  def neopixel_register(board, pin, num_pixels) do
+    data = <<pin, num_pixels>>
+    board |> sysex_write(@neopixel_register, data)
+  end
+
+  def neopixel(board, index, {r, g, b}) do
+    data = <<index, r, g, b>>
+    board |> sysex_write(@neopixel, data)
+  end
+
+  def neopixel_brightness(board, brightness) do
+    data = <<brightness>>
+    board |> sysex_write(@neopixel_brightness, data)
+  end
+
   def sysex_write(board, cmd, data) do
     GenServer.call(board, {:sysex_write, cmd, data})
   end
