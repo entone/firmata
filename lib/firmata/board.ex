@@ -137,17 +137,14 @@ defmodule Firmata.Board do
   end
 
   def handle_info({:capability_response, pins}, state) do
-    Logger.info "#{inspect pins}"
     state = Map.put(state, :pins, pins)
     send_data(state, <<@start_sysex, @analog_mapping_query, @end_sysex>>)
     {:noreply, state}
   end
 
   def handle_info({:analog_mapping_response, mapping}, state) do
-    Logger.info "#{inspect mapping}"
     pins = state[:pins]
     |> Enum.zip(mapping)
-    |> IO.inspect
     |> Enum.map(fn({pin, map})-> Keyword.merge(pin, map) end)
     |> Enum.map(fn pin -> Keyword.merge(pin, [interface: nil]) end)
     state = Map.put(state, :pins, pins)
