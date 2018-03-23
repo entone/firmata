@@ -41,6 +41,8 @@ defmodule Firmata.Protocol.Mixin do
       # internal: fixnum byte sysex command for firmware query and response
       @firmware_query 0x79
 
+      @sampling_rate 0x7a
+
       @i2c_config 0x78
 
       @i2c_request 0x76

@@ -76,8 +76,10 @@ defmodule Firmata.Board do
     {:ok, serial} = Nerves.UART.start_link
     :ok = Nerves.UART.open(serial, port, uart_opts)
 
-    Nerves.UART.write(serial, <<0xFF>>)
-    Nerves.UART.write(serial, <<0xF9>>)
+    Nerves.UART.write(serial, <<@system_reset>>)
+    Nerves.UART.write(serial, <<@report_version>>)
+
+    Firmata.Writer.start_link(serial)
 
     state =
       @initial_state
@@ -187,14 +189,17 @@ defmodule Firmata.Board do
     {:noreply, state}
   end
 
-  defp send_data(state, data), do: Nerves.UART.write(state.serial, data)
+  defp send_data(state, data), do: Firmata.Writer.write(data)
+
   defp send_info(state, info, interface \\ nil) do
     case interface do
       nil -> send_to(state[:interface], {:firmata, info})
       _ -> send_to(interface, {:firmata, info})
     end
   end
+
   defp send_to(interface, message), do: send(interface, message)
+
   defp put_pin(state, index, key, value, found_callback \\ nil) do
     pins = state[:pins] |> List.update_at(index, fn(pin) ->
       pin = Keyword.put(pin, key, value)
