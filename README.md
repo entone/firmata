@@ -79,7 +79,7 @@ defmodule FirmataTest.Board do
     #most Atlas Scientific stamps take about 1000ms to return a value
     :timer.sleep(1000)
     #Read 32 bytes from i2c channel we wrote to a second ago.
-    #We will get the response in handle_info(:firmata, {:i2c_response: value})
+    #We will get the response in handle_info(:firmata, {:i2c_reply: value})
     Firmata.Board.sysex_write(state.firmata, @i2c_request, <<@i2c_channel, @i2c_mode.read, @read_bytes>>)
     # Take a reading every second
     Process.send_after(self(), :read_i2c, 1000)
@@ -112,7 +112,7 @@ defmodule FirmataTest.Board do
     {:noreply, state}
   end
 
-  def handle_info({:firmata, {:i2c_response, <<channel::integer, 0, 0, 0, _rc::integer, value::binary>>} = payload}, state) do
+  def handle_info({:firmata, {:i2c_reply, <<channel::integer, 0, 0, 0, _rc::integer, value::binary>>} = payload}, state) do
     Logger.debug "Payload: #{inspect payload}"
     Logger.debug "Channel: #{channel}"
     Logger.debug "Raw Value: #{inspect value}"
@@ -176,3 +176,27 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
         def application do
           [applications: [:firmata]]
         end
+
+
+```elixir
+defmodule Teste do
+  def to_binary(<<a::1, b::1, c::1, d::1, e::1, f::1, g::1, h::1>>) do
+    "#{a}#{b}#{c}#{d}#{e}#{f}#{g}#{h}"
+  end
+  
+  def to_decimal(<<decimal>>) do
+    decimal
+  end
+  
+  def split(<<cmd::4, pin::4>>) do
+    %{cmd: cmd, pin: pin}
+  end
+end
+
+
+{:ok, board} = Firmata.Board.start_link()
+Firmata.Board.set_pin_mode(board, 13, 0x01)
+Firmata.Board.digital_write(board, 13, 1)  
+Firmata.Board.set_pin_mode(board, 13, 0x00)
+Firmata.Board.enable_digital_report(board, 13)
+```

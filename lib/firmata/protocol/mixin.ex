@@ -45,7 +45,7 @@ defmodule Firmata.Protocol.Mixin do
 
       @i2c_request 0x76
 
-      @i2c_response 0x77
+      @i2c_reply 0x77
 
       @i2c_mode %{write: 00, read: 10}
 

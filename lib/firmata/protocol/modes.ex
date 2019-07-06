@@ -10,11 +10,10 @@ defmodule Firmata.Protocol.Modes do
       @i2c 0x06
       @onewire 0x07
       @stepper 0x08
-      @serial 0x0a
-      @ignore 0x7f
-      @ping_read 0x75
-      @sonar 0x0B
-      @unknown 0x10
+      @encoder 0x09
+      @serial 0x0A
+      @input_pullup 0x0B
+      @ignore 0x7F
 
       @modes [
         @input,
@@ -26,12 +25,26 @@ defmodule Firmata.Protocol.Modes do
         @i2c,
         @onewire,
         @stepper,
+        @encoder,
         @serial,
-        @ignore,
-        @ping_read,
-        @sonar,
-        @unknown
+        @input_pullup,
+        @ignore
       ]
+
+      def translate_mode(@input), do: {:input, @input}
+      def translate_mode(@output), do: {:output, @output}
+      def translate_mode(@analog), do: {:analog, @analog}
+      def translate_mode(@pwm), do: {:pwm, @pwm}
+      def translate_mode(@servo), do: {:servo, @servo}
+      def translate_mode(@shift), do: {:shift, @shift}
+      def translate_mode(@i2c), do: {:i2c, @i2c}
+      def translate_mode(@onewire), do: {:onewire, @onewire}
+      def translate_mode(@stepper), do: {:stepper, @stepper}
+      def translate_mode(@encoder), do: {:encoder, @encoder}
+      def translate_mode(@serial), do: {:serial, @serial}
+      def translate_mode(@input_pullup), do: {:input_pullup, @input_pullup}
+      def translate_mode(@ignore), do: {:ignore, @ignore}
+      def translate_mode(mode), do: {:unknown, mode}
     end
   end
 end
