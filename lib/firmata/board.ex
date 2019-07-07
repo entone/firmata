@@ -2,8 +2,8 @@ defmodule Firmata.Board do
   use GenServer
   use Firmata.Protocol.Mixin
   use Firmata.Protocol.Modes
+
   require Logger
-  alias Firmata.Protocol.State, as: ProtocolState
 
   @initial_state %{
     pins: [],
@@ -16,7 +16,7 @@ defmodule Firmata.Board do
   }
 
   def start_link(port \\ "/dev/ttyACM0", opts \\ [], name \\ nil) do
-    opts = Keyword.put(opts, :interface, self)
+    opts = Keyword.put(opts, :interface, self())
     GenServer.start_link(__MODULE__, {port, opts}, name: name)
   end
 
@@ -26,6 +26,14 @@ defmodule Firmata.Board do
 
   def report_analog_channel(board, channel, value) do
     GenServer.call(board, {:report_analog_channel, channel, value})
+  end
+
+  def analog_read(board, channel) do
+    GenServer.call(board, {:analog_read, channel})
+  end
+
+  def analog_write(board, channel, value) do
+    GenServer.call(board, {:analog_write, channel, value})
   end
 
   def set_pin_mode(board, pin, mode) do
@@ -40,17 +48,12 @@ defmodule Firmata.Board do
     GenServer.call(board, {:digital_write, pin, value})
   end
 
-  def set_digital_report(board, pin, value) do
-    GenServer.call(board, {:set_digital_report, pin, value})
+  def digital_read(board, pin) do
+    GenServer.call(board, {:digital_read, pin})
   end
 
-  def sonar_config(board, trigger, echo, max_distance, ping_interval) do
-    set_pin_mode(board, trigger, @sonar)
-    set_pin_mode(board, echo, @sonar)
-    max_distance_lsb = max_distance &&& 0x7F
-    max_distance_msb = max_distance >>> 7 &&& 0x7F
-    data = <<trigger, echo, max_distance_lsb, max_distance_msb, ping_interval>>
-    board |> sysex_write(@sonar_config, data)
+  def report_digital_port(board, pin, value) do
+    GenServer.call(board, {:report_digital_port, pin, value})
   end
 
   def neopixel_register(board, pin, num_pixels) do
@@ -119,14 +122,38 @@ defmodule Firmata.Board do
 
   def handle_call({:digital_write, pin, value}, _from, state) do
     state = state |> put_pin(pin, :value, value)
-    signal = state[:pins] |> Firmata.Protocol.digital_write(pin, value)
+    signal = state[:pins] |> Firmata.Protocol.digital_write(pin)
     send_data(state, signal)
     {:reply, :ok, state}
   end
 
-  def handle_call({:set_digital_report, pin, value}, _from, state) do
+  def handle_call({:digital_read, pin_number}, _from, state) do
+    pin = state |> find_digital_pin_by_number(pin_number)
+    {:reply, pin[:value], state}
+  end
+
+  def handle_call({:report_digital_port, pin, value}, _from, state) do
     state = state |> put_pin(pin, :report, value)
-    signal = state[:pins] |> Firmata.Protocol.set_digital_report(pin, value)
+    signal = state[:pins] |> Firmata.Protocol.report_digital_port(pin)
+    send_data(state, signal)
+    {:reply, :ok, state}
+  end
+
+  def handle_call({:analog_read, channel}, _from, state) do
+    pin = state |> find_analog_pin_by_channel(channel)
+    {:reply, pin[:value], state}
+  end
+
+  def handle_call({:analog_write, channel, value}, _from, state) do
+    state =
+      state
+      |> put_analog_channel(channel, :value, value)
+
+    signal =
+      state
+      |> find_analog_pin_by_channel(channel)
+      |> Firmata.Protocol.analog_write(channel)
+
     send_data(state, signal)
     {:reply, :ok, state}
   end
@@ -137,10 +164,12 @@ defmodule Firmata.Board do
   end
 
   def handle_info({:nerves_uart, _port, data}, state) do
+    Logger.debug("uart_in: #{inspect(data)}")
+
     {outbox, parser} =
       Enum.reduce(data, {state.outbox, state.parser}, &Firmata.Protocol.parse(&2, &1))
 
-    Enum.each(outbox, &send(self, &1))
+    Enum.each(outbox, &send(self(), &1))
     {:noreply, %{state | outbox: [], parser: parser}}
   end
 
@@ -175,29 +204,27 @@ defmodule Firmata.Board do
     {:noreply, state}
   end
 
-  def handle_info({:analog_read, channel, value}, state) do
+  def handle_info({:analog_report, channel, value}, state) do
     state =
       state
       |> put_analog_channel(channel, :value, value, fn pin ->
-        send_info(state, {:analog_read, pin[:analog_channel], value}, pin[:interface])
+        send_info(state, {:analog_report, pin[:analog_channel], value}, pin[:interface])
       end)
 
     {:noreply, state}
   end
 
-  def handle_info({:digital_read, values}, state) do
+  def handle_info({:digital_report, values}, state) do
     state =
       values
       |> Enum.reduce(state, fn {port_index, value}, acc ->
         pin_record = Enum.at(state[:pins], port_index)
 
         if pin_record && pin_record[:report] === 1 do
-          acc =
-            acc
-            |> put_pin(port_index, :value, value, fn pin ->
-              # Logger.info("digital_read: #{inspect(pin)}")
-              send_info(state, {:digital_read, pin[:pin_number], value}, pin[:interface])
-            end)
+          acc
+          |> put_pin(port_index, :value, value, fn pin ->
+            send_info(state, {:digital_report, pin[:pin_number], value}, pin[:interface])
+          end)
         else
           acc
         end
@@ -216,23 +243,18 @@ defmodule Firmata.Board do
     {:noreply, state}
   end
 
-  def handle_info({:sonar_data, [value: value, pin: pin]}, state) do
-    send_info(state, {:sonar_data, pin, value})
-    {:noreply, state}
-  end
-
   def handle_info({:pin_state, pin, mode, pin_state}, state) do
     send_info(state, {:pin_state, pin, mode, pin_state})
     {:noreply, state}
   end
 
   def handle_info(unknown, state) do
-    # Logger.error("Unknown message in #{__MODULE__}: #{inspect(unknown)}")
+    Logger.debug("Unknown message in #{__MODULE__}: #{inspect(unknown)}")
     {:noreply, state}
   end
 
   defp send_data(state, data) do
-    # Logger.info("send_data: #{inspect(data)} \n")
+    Logger.debug("uart_out: #{inspect(data)}")
     Nerves.UART.write(state.serial, data)
   end
 
@@ -254,7 +276,7 @@ defmodule Firmata.Board do
         pin
       end)
 
-    state = Map.put(state, :pins, pins)
+    Map.put(state, :pins, pins)
   end
 
   defp analog_channel_to_pin_index(state, channel) do
@@ -263,9 +285,21 @@ defmodule Firmata.Board do
     end)
   end
 
+  defp find_analog_pin_by_channel(state, channel) do
+    Enum.find(state[:pins], fn pin ->
+      pin[:analog_channel] === channel
+    end)
+  end
+
   defp put_analog_channel(state, channel, key, value, found_callback \\ nil) do
     pin = analog_channel_to_pin_index(state, channel)
     put_pin(state, pin, key, value, found_callback)
+  end
+
+  defp find_digital_pin_by_number(state, pin_number) do
+    Enum.find(state[:pins], fn pin ->
+      pin[:pin_number] === pin_number
+    end)
   end
 
   defp parse_ascii(data), do: for(n <- data, n != <<0>>, into: "", do: n)

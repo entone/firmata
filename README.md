@@ -16,13 +16,16 @@ Firmata is a MIDI-based protocol for communicating with microcontrollers.
   * Retreiving Analog Pin Mapping
 * Toggle Analog Channel Reporting
 * Set Pin Mode
-* Digital Write
 * I2C Read/Write
 * String Data
+* Toggle Digital Port Reporting
+* Digital Read/Write
+* Analog Read
+
 
 **Planned**
 
-* Digital Read
+* [`PulseIn/PulseOut`](http://firmata.org/wiki/Proposals#pulseIn.2FpulseOut_Proposal)
 
 ## Usage Example
 
@@ -152,7 +155,7 @@ defmodule FirmataTest.Analog do
     {:ok, %State{firmata: firmata, channel: channel}}
   end
 
-  def handle_info({:firmata, {:analog_read, channel, value}}, %{channel: s_channel} = state) when channel === s_channel do
+  def handle_info({:firmata, {:analog_report, channel, value}}, %{channel: s_channel} = state) when channel === s_channel do
     Logger.debug "#{__MODULE__} on #{channel}: #{inspect value}"
     #Update our state with the latest value
     {:noreply, %State{state | value: value}}
@@ -204,7 +207,12 @@ end
 
 {:ok, board} = Firmata.Board.start_link()
 Firmata.Board.set_pin_mode(board, 13, 0x01)
+Firmata.Board.digital_read(board, 13)
 Firmata.Board.digital_write(board, 13, 1)  
 Firmata.Board.set_pin_mode(board, 13, 0x00)
 Firmata.Board.enable_digital_report(board, 13)
+
+{:ok, board} = Firmata.Board.start_link()
+Firmata.Board.set_pin_mode(board, 13, 0x01)
+
 ```

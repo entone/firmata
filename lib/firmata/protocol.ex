@@ -28,26 +28,26 @@ defmodule Firmata.Protocol do
   end
 
   def parse({outbox, {}}, <<byte>>) when byte in @analog_message_range do
-    {outbox, {:analog_read, byte &&& 0x0F}}
+    {outbox, {:analog_report, byte &&& 0x0F}}
   end
 
-  def parse({outbox, {:analog_read, pin}}, <<lsb>>) do
-    {outbox, {:analog_read, pin, lsb}}
+  def parse({outbox, {:analog_report, pin}}, <<lsb>>) do
+    {outbox, {:analog_report, pin, lsb}}
   end
 
-  def parse({outbox, {:analog_read, pin, lsb}}, <<msb>>) do
-    {[{:analog_read, pin, lsb ||| msb <<< 7} | outbox], {}}
+  def parse({outbox, {:analog_report, pin, lsb}}, <<msb>>) do
+    {[{:analog_report, pin, lsb ||| msb <<< 7} | outbox], {}}
   end
 
   def parse({outbox, {}}, <<byte>>) when byte in @digital_message_range do
-    {outbox, {:digital_read, byte &&& 0x0F}}
+    {outbox, {:digital_report, byte &&& 0x0F}}
   end
 
-  def parse({outbox, {:digital_read, port}}, <<lsb>>) do
-    {outbox, {:digital_read, port, lsb}}
+  def parse({outbox, {:digital_report, port}}, <<lsb>>) do
+    {outbox, {:digital_report, port, lsb}}
   end
 
-  def parse({outbox, {:digital_read, port, lsb}}, <<msb>>) do
+  def parse({outbox, {:digital_report, port, lsb}}, <<msb>>) do
     values =
       Enum.map(0..8, fn i ->
         port_index = 8 * port + i
@@ -55,7 +55,7 @@ defmodule Firmata.Protocol do
         {port_index, port_value}
       end)
 
-    {[{:digital_read, values} | outbox], {}}
+    {[{:digital_report, values} | outbox], {}}
   end
 
   def parse(protocol_state, byte) do
@@ -64,7 +64,7 @@ defmodule Firmata.Protocol do
     protocol_state
   end
 
-  def digital_write(pins, pin, value) do
+  def digital_write(pins, pin) do
     float = pin / 8
     port = float |> Float.floor() |> round
 
@@ -83,7 +83,7 @@ defmodule Firmata.Protocol do
     <<@digital_message ||| port, port_value &&& 0x7F, port_value >>> 7 &&& 0x7F>>
   end
 
-  def set_digital_report(pins, pin, value) do
+  def report_digital_port(pins, pin) do
     float = pin / 8
     port = float |> Float.floor() |> round
 
@@ -92,21 +92,17 @@ defmodule Firmata.Protocol do
         index = 8 * port + i
         pin_record = Enum.at(pins, index)
 
-        if pin_record do
+        if pin_record && pin_record[:report] === 1 do
           acc ||| 1 <<< i
         else
           acc
         end
       end)
 
-    report_digital = <<@report_digital ||| port, port_value &&& 0x7F>>
-    report_digital
+    <<@report_digital ||| port, port_value &&& 0x7F>>
   end
 
-  defp print_binary(binary) do
-    binary
-    |> Enum.map(fn <<int>> -> int end)
-    |> Enum.join(",")
-    |> IO.puts()
+  def analog_write(pin, value) do
+    <<@report_analog ||| pin, value &&& 0x7F, value >>> 7 &&& 0x7F>>
   end
 end

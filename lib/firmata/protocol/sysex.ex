@@ -26,15 +26,11 @@ defmodule Firmata.Protocol.Sysex do
     {:string_data, binary(sysex)}
   end
 
-  def parse(@sonar_data, sysex) do
-    {:sonar_data, sonar_data(sysex)}
-  end
-
   def parse(@pin_state_response, <<pin, mode, state>>) do
     {:pin_state, pin, mode, state}
   end
 
-  def parse(bad_byte, sysex) do
+  def parse(_bad_byte, _sysex) do
   end
 
   def firmware_query(sysex) do
@@ -108,14 +104,5 @@ defmodule Firmata.Protocol.Sysex do
 
   def binary(sysex) do
     [value: sysex]
-  end
-
-  def sonar_data(<<trigger, lsb, msb>> = sysex) do
-    val = (msb <<< 7) + lsb
-    [value: val, pin: trigger]
-  end
-
-  def sonar_data(<<sysex>>) do
-    [value: nil, pin: nil]
   end
 end
