@@ -178,6 +178,14 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
         end
 
 
+## PulseIn/PulseOut Implementation
+
+http://firmata.org/wiki/Proposals#pulseIn.2FpulseOut_Proposal
+https://github.com/jgautier/arduino-1/commit/f8c7b8f97fb0da6eaabc94cb17761548b9a49f28
+https://github.com/tino/pyFirmata/pull/45/commits/c3471ecd29349470460b1f5631656d2b685fe571
+https://github.com/tino/pyFirmata/pull/45/commits/c5705ced2a278ce8975dff1a26b67a480bdb2015#diff-42e0b2563b61708da1888a83dd48f7d4L69
+
+
 ```elixir
 defmodule Teste do
   def to_binary(<<a::1, b::1, c::1, d::1, e::1, f::1, g::1, h::1>>) do
