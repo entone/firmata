@@ -50,10 +50,9 @@ defmodule Firmata.Protocol do
     port_value = Enum.reduce(0..8, 0, fn(i, acc) ->
       index = 8 * port + i
       pin_record = Enum.at(pins, index)
-      port_value = (pin_record && pin_record[:value]) || 0
-
-      # If value == 0, acc will effectively be unchanged
-      acc ||| (value <<< i)
+      val = (pin_record && pin_record[:value]) || 0
+      # If val == 0, acc will effectively be unchanged
+      acc ||| (val <<< i)
     end)
 
     <<@digital_message ||| port, mask_n_lsb(port_value, 7), mask_n_lsb(port_value >>> 7, 7)>>
