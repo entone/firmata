@@ -27,7 +27,7 @@ defmodule Firmata.Protocol do
   end
 
   def parse({outbox, {}}, <<byte>>) when byte in @analog_message_range do
-    {outbox, {:analog_read, byte &&& 0x0F}}
+    {outbox, {:analog_read, mask_n_lsb(byte, 4)}}
   end
 
   def parse({outbox, {:analog_read, pin}}, <<lsb>>) do
@@ -38,25 +38,34 @@ defmodule Firmata.Protocol do
     {[{:analog_read, pin, lsb ||| (msb <<< 7)} | outbox], {}}
   end
 
-  def parse(protocol_state, byte) do
+  def parse(protocol_state, _byte) do
     # IO.inspect "unknown: #{to_hex(byte)}"
     # We ignore what we do not understand
     protocol_state
   end
 
   def digital_write(pins, pin, value) do
-    float = pin / 8
-    port = float |> Float.floor |> round
+    port = pin >>> 3 # divide by 8, returning int
+
     port_value = Enum.reduce(0..8, 0, fn(i, acc) ->
       index = 8 * port + i
       pin_record = Enum.at(pins, index)
-      if pin_record && pin_record[:value] === 1 do
-        acc ||| (1 <<< i)
-      else
-        acc
-      end
+      port_value = (pin_record && pin_record[:value]) || 0
+
+      # If value == 0, acc will effectively be unchanged
+      acc ||| (value <<< i)
     end)
-    <<@digital_message ||| port, port_value &&& 0x7F, (port_value >>> 7) &&& 0x7F>>
+
+    <<@digital_message ||| port, mask_n_lsb(port_value, 7), mask_n_lsb(port_value >>> 7, 7)>>
+  end
+
+  defp mask_n_lsb(number, n) do
+    "1"
+    |> to_charlist()
+    |> Stream.cycle()
+    |> Enum.take(n)
+    |> List.to_integer(2)
+    |> Bitwise.&&&(number)
   end
 
   defp print_binary(binary) do
