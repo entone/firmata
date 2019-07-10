@@ -11,7 +11,7 @@ defmodule Firmata.Protocol do
   end
 
   def parse({outbox, {:report_version, major}}, <<minor>>) do
-    {[ {:report_version, major, minor} | outbox ], {}}
+    {[{:report_version, major, minor} | outbox], {}}
   end
 
   def parse({outbox, {}}, <<@start_sysex>> = sysex) do
@@ -19,11 +19,11 @@ defmodule Firmata.Protocol do
   end
 
   def parse({outbox, {:sysex, sysex}}, <<@end_sysex>>) do
-    {[ Sysex.parse(sysex) | outbox ], {}}
+    {[Sysex.parse(sysex) | outbox], {}}
   end
 
   def parse({outbox, {:sysex, sysex}}, byte) do
-    {outbox, {:sysex, sysex <> byte }}
+    {outbox, {:sysex, sysex <> byte}}
   end
 
   def parse({outbox, {}}, <<byte>>) when byte in @analog_message_range do
@@ -35,7 +35,7 @@ defmodule Firmata.Protocol do
   end
 
   def parse({outbox, {:analog_read, pin, lsb}}, <<msb>>) do
-    {[{:analog_read, pin, lsb ||| (msb <<< 7)} | outbox], {}}
+    {[{:analog_read, pin, lsb ||| msb <<< 7} | outbox], {}}
   end
 
   def parse(protocol_state, _byte) do
@@ -45,15 +45,17 @@ defmodule Firmata.Protocol do
   end
 
   def digital_write(pins, pin, value) do
-    port = pin >>> 3 # divide by 8, returning int
+    # divide by 8, returning int
+    port = pin >>> 3
 
-    port_value = Enum.reduce(0..8, 0, fn(i, acc) ->
-      index = 8 * port + i
-      pin_record = Enum.at(pins, index)
-      val = (pin_record && pin_record[:value]) || 0
-      # If val == 0, acc will effectively be unchanged
-      acc ||| (val <<< i)
-    end)
+    port_value =
+      Enum.reduce(0..8, 0, fn i, acc ->
+        index = 8 * port + i
+        pin_record = Enum.at(pins, index)
+        val = (pin_record && pin_record[:value]) || 0
+        # If val == 0, acc will effectively be unchanged
+        acc ||| val <<< i
+      end)
 
     <<@digital_message ||| port, mask_n_lsb(port_value, 7), mask_n_lsb(port_value >>> 7, 7)>>
   end
@@ -69,8 +71,8 @@ defmodule Firmata.Protocol do
 
   defp print_binary(binary) do
     binary
-    |> Enum.map(fn(<<int>>)-> int end)
+    |> Enum.map(fn <<int>> -> int end)
     |> Enum.join(",")
-    |> IO.puts
+    |> IO.puts()
   end
 end
