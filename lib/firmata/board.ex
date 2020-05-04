@@ -3,6 +3,7 @@ defmodule Firmata.Board do
   use Firmata.Protocol.Mixin
   require Logger
   alias Firmata.Protocol.State, as: ProtocolState
+  alias Circuits.UART
 
   @initial_state %{
     pins: [],
@@ -73,11 +74,11 @@ defmodule Firmata.Board do
     speed = opts[:speed] || 57600
     uart_opts = [speed: speed, active: true]
 
-    {:ok, serial} = Nerves.UART.start_link()
-    :ok = Nerves.UART.open(serial, port, uart_opts)
+    {:ok, serial} = UART.start_link()
+    :ok = UART.open(serial, port, uart_opts)
 
-    Nerves.UART.write(serial, <<0xFF>>)
-    Nerves.UART.write(serial, <<0xF9>>)
+    UART.write(serial, <<0xFF>>)
+    UART.write(serial, <<0xF9>>)
 
     state =
       @initial_state
@@ -120,7 +121,7 @@ defmodule Firmata.Board do
     {:reply, :ok, state}
   end
 
-  def handle_info({:nerves_uart, _port, data}, state) do
+  def handle_info({:circuits_uart, _port, data}, state) do
     {outbox, parser} =
       Enum.reduce(data, {state.outbox, state.parser}, &Firmata.Protocol.parse(&2, &1))
 
@@ -194,7 +195,7 @@ defmodule Firmata.Board do
     {:noreply, state}
   end
 
-  defp send_data(state, data), do: Nerves.UART.write(state.serial, data)
+  defp send_data(state, data), do: UART.write(state.serial, data)
 
   defp send_info(state, info, interface \\ nil) do
     case interface do
