@@ -10,8 +10,8 @@ defmodule Firmata.Protocol.Modes do
       @i2c 0x06
       @onewire 0x07
       @stepper 0x08
-      @serial 0x0a
-      @ignore 0x7f
+      @serial 0x0A
+      @ignore 0x7F
       @ping_read 0x75
       @sonar 0x0B
       @unknown 0x10

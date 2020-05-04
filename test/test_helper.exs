@@ -2,8 +2,8 @@ defmodule FirmataTest.Helper do
   defmacro __using__(_) do
     quote location: :keep do
       use Firmata.Protocol.Mixin
-      @low_pins 1..20 |> Enum.map(fn(_) -> [value: 0] end)
-      @high_pins 1..20 |> Enum.map(fn(_) -> [value: 1] end)
+      @low_pins 1..20 |> Enum.map(fn _ -> [value: 0] end)
+      @high_pins 1..20 |> Enum.map(fn _ -> [value: 1] end)
       @high 1
       @low 0
 
@@ -11,7 +11,7 @@ defmodule FirmataTest.Helper do
       defp low(pins, index), do: set_pin(pins, index, @low)
 
       defp set_pin(pins, index, value) do
-        List.update_at(pins, index, fn(pin) ->
+        List.update_at(pins, index, fn pin ->
           Keyword.put(pin, :value, value)
         end)
       end
