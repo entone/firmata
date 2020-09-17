@@ -168,7 +168,7 @@ If [available in Hex](https://hex.pm/docs/publish), the package can be installed
   1. Add firmata to your list of dependencies in `mix.exs`:
 
         def deps do
-          [{:firmata, "~> 0.1.2"}]
+          [{:firmata, "~> 0.0.2"}]
         end
 
   2. Ensure firmata is started before your application:
